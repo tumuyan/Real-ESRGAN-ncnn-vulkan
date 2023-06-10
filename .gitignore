@@ -36,3 +36,4 @@ release
 *.exe
 *.out
 *.app
+.vs
