@@ -26,6 +26,9 @@ namespace fs = std::filesystem;
 #include "stb_image_write.h"
 #endif // _WIN32
 #include "webp_image.h"
+#include <chrono>
+
+using namespace std::chrono;
 
 #if _WIN32
 #include <wchar.h>
@@ -428,12 +431,28 @@ void* save(void* args)
 }
 
 
+void print_time_usage(high_resolution_clock::time_point begin) {
+	high_resolution_clock::time_point end = high_resolution_clock::now();
+	duration<double> time_span = duration_cast<duration<double>>(end - begin);
+	double time_s = time_span.count();
+	if (time_s > 120) {
+		int time_m = time_s / 60;
+		time_s = time_s - time_m * 60;
+		fprintf(stderr, "use time: %d minute %.3f second.\n", time_m, time_s);
+	}
+	else
+		fprintf(stderr, "use time: %.3f second.\n", time_span);
+}
+
+
 #if _WIN32
 int wmain(int argc, wchar_t** argv)
 #else
 int main(int argc, char** argv)
 #endif
 {
+    high_resolution_clock::time_point process_begin = high_resolution_clock::now();
+
     path_t inputpath;
     path_t outputpath;
     int scale = 2;
@@ -731,6 +750,8 @@ int main(int argc, char** argv)
 #endif
 
     ncnn::create_gpu_instance();
+    fprintf(stderr, "load model: %ls\n", modelpath);
+
 
     if (gpuid.empty())
     {
@@ -886,5 +907,6 @@ int main(int argc, char** argv)
 
     ncnn::destroy_gpu_instance();
 
+    print_time_usage(process_begin);
     return 0;
 }
