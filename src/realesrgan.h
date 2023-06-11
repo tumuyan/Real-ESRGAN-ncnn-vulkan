@@ -10,6 +10,13 @@
 #include "gpu.h"
 #include "layer.h"
 
+#include "filesystem_utils.h"
+#include <filesystem>
+#include <chrono>
+
+using namespace std::chrono;
+namespace fs = std::filesystem;
+
 class RealESRGAN
 {
 public:
@@ -22,13 +29,14 @@ public:
     int load(const std::string& parampath, const std::string& modelpath);
 #endif
 
-    int process(const ncnn::Mat& inimage, ncnn::Mat& outimage) const;
+    int process(const ncnn::Mat& inimage, ncnn::Mat& outimage, path_t& inpath) const;
 
 public:
     // realesrgan parameters
     int scale;
     int tilesize;
     int prepadding;
+    int imgcount;
 
 private:
     ncnn::Net net;
@@ -38,6 +46,7 @@ private:
     ncnn::Layer* bicubic_3x;
     ncnn::Layer* bicubic_4x;
     bool tta_mode;
+
 };
 
 #endif // REALESRGAN_H

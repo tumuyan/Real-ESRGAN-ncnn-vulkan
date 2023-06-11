@@ -1,4 +1,4 @@
-// realesrgan implemented with ncnn library
+﻿// realesrgan implemented with ncnn library
 
 #include "realesrgan.h"
 
@@ -204,7 +204,18 @@ int RealESRGAN::load(const std::string& parampath, const std::string& modelpath)
     return 0;
 }
 
-int RealESRGAN::process(const ncnn::Mat& inimage, ncnn::Mat& outimage) const
+void print_progress(high_resolution_clock::time_point begin, float progress, path_t& inpath, int imgcount) {
+	high_resolution_clock::time_point end = high_resolution_clock::now();
+	double time_span = duration_cast<duration<double>>(end - begin).count();
+	if (imgcount > 1) {
+		fprintf(stderr, "%5.2f%% [%5.2fs /%5.2f ETA] %ls\n", progress * 100, time_span, time_span / progress - time_span, inpath.c_str());
+	}
+	else {
+		fprintf(stderr, "%5.2f%% [%5.2fs /%5.2f ETA]\n", progress * 100, time_span, time_span / progress - time_span);
+	}
+}
+
+int RealESRGAN::process(const ncnn::Mat& inimage, ncnn::Mat& outimage, path_t& inpath) const
 {
     const unsigned char* pixeldata = (const unsigned char*)inimage.data;
     const int w = inimage.w;
@@ -227,6 +238,9 @@ int RealESRGAN::process(const ncnn::Mat& inimage, ncnn::Mat& outimage) const
     const int ytiles = (h + TILE_SIZE_Y - 1) / TILE_SIZE_Y;
 
     const size_t in_out_tile_elemsize = opt.use_fp16_storage ? 2u : 4u;
+
+
+    high_resolution_clock::time_point begin = high_resolution_clock::now();
 
     //#pragma omp parallel for num_threads(2)
     for (int yi = 0; yi < ytiles; yi++)
@@ -287,6 +301,7 @@ int RealESRGAN::process(const ncnn::Mat& inimage, ncnn::Mat& outimage) const
         {
             out_gpu.create(w * scale, (out_tile_y1 - out_tile_y0) * scale, channels, (size_t)4u, 1, blob_vkallocator);
         }
+        
 
         for (int xi = 0; xi < xtiles; xi++)
         {
@@ -549,8 +564,7 @@ int RealESRGAN::process(const ncnn::Mat& inimage, ncnn::Mat& outimage) const
                 cmd.submit_and_wait();
                 cmd.reset();
             }
-
-            fprintf(stderr, "%.2f%%\n", (float)(yi * xtiles + xi) / (ytiles * xtiles) * 100);
+            print_progress(begin,  (float)(yi * xtiles + xi) / (ytiles * xtiles), inpath, imgcount);
         }
 
         // download

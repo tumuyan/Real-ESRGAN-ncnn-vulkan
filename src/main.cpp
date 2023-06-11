@@ -8,7 +8,6 @@
 #include <filesystem>
 namespace fs = std::filesystem;
 
-
 #if _WIN32
 // image decoder and encoder with wic
 #include "wic_image.h"
@@ -174,6 +173,11 @@ public:
         condition.signal();
     }
 
+    int size()
+    {
+        return tasks.size();
+    }
+
 private:
     ncnn::Mutex lock;
     ncnn::ConditionVariable condition;
@@ -315,6 +319,9 @@ public:
     const RealESRGAN* realesrgan;
 };
 
+
+static path_t no_path = PATHSTR("");
+
 void* proc(void* args)
 {
     const ProcThreadParams* ptp = (const ProcThreadParams*)args;
@@ -329,7 +336,13 @@ void* proc(void* args)
         if (v.id == -233)
             break;
 
-        realesrgan->process(v.inimage, v.outimage);
+        realesrgan->process(v.inimage, v.outimage, v.inpath);
+  //      fprintf(stderr, "%d\t", toproc.size());
+		//if (toproc.size() > 1)
+		//	realesrgan->process(v.inimage, v.outimage, v.inpath);
+		//else
+		//	realesrgan->process(v.inimage, v.outimage, no_path);
+
 
         tosave.put(v);
     }
@@ -436,12 +449,12 @@ void print_time_usage(high_resolution_clock::time_point begin) {
 	duration<double> time_span = duration_cast<duration<double>>(end - begin);
 	double time_s = time_span.count();
 	if (time_s > 120) {
-		int time_m = time_s / 60;
+		int time_m = (int)time_s / 60;
 		time_s = time_s - time_m * 60;
-		fprintf(stderr, "use time: %d minute %.3f second.\n", time_m, time_s);
+		fprintf(stderr, "use time: %d minute %.2f second.\n", time_m, time_s);
 	}
 	else
-		fprintf(stderr, "use time: %.3f second.\n", time_span);
+		fprintf(stderr, "use time: %.2f second.\n", time_span);
 }
 
 
@@ -827,6 +840,7 @@ int main(int argc, char** argv)
             realesrgan[i]->scale = scale;
             realesrgan[i]->tilesize = tilesize[i];
             realesrgan[i]->prepadding = prepadding;
+            realesrgan[i]->imgcount = input_files.size();
         }
 
         // main routine
