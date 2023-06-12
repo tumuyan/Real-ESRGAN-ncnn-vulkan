@@ -204,14 +204,25 @@ int RealESRGAN::load(const std::string& parampath, const std::string& modelpath)
     return 0;
 }
 
-void print_progress(high_resolution_clock::time_point begin, float progress, path_t& inpath, int imgcount) {
+void print_progress(high_resolution_clock::time_point begin, float progress, path_t& inpath, int imgcount, bool erase) {
 	high_resolution_clock::time_point end = high_resolution_clock::now();
 	double time_span = duration_cast<duration<double>>(end - begin).count();
 	if (imgcount > 1) {
-		fprintf(stderr, "%5.2f%% [%5.2fs /%5.2f ETA] %ls\n", progress * 100, time_span, time_span / progress - time_span, inpath.c_str());
+        if (!erase)
+        {
+#if _WIN32
+            fwprintf(stderr, L"%5.2f%% [%5.2fs /%5.2f ETA] %ls\n", progress * 100, time_span, time_span / progress - time_span, inpath.c_str());
+#else
+            fprintf(stderr, "%5.2f%% [%5.2fs /%5.2f ETA] %s\n", progress * 100, time_span, time_span / progress - time_span, inpath.c_str());
+#endif
+            
+        }
 	}
 	else {
-		fprintf(stderr, "%5.2f%% [%5.2fs /%5.2f ETA]\n", progress * 100, time_span, time_span / progress - time_span);
+		if (erase)
+			fprintf(stderr, "\r%5.2f%% [%5.2fs /%5.2f ETA]", progress * 100, time_span, time_span / progress - time_span);
+		else
+			fprintf(stderr, "%5.2f%% [%5.2fs /%5.2f ETA]\n", progress * 100, time_span, time_span / progress - time_span);
 	}
 }
 
@@ -564,7 +575,8 @@ int RealESRGAN::process(const ncnn::Mat& inimage, ncnn::Mat& outimage, path_t& i
                 cmd.submit_and_wait();
                 cmd.reset();
             }
-            print_progress(begin,  (float)(yi * xtiles + xi) / (ytiles * xtiles), inpath, imgcount);
+            if(log_level>1)
+                print_progress(begin, (float)(yi * xtiles + xi) / (ytiles * xtiles), inpath, imgcount, log_level<3);
         }
 
         // download

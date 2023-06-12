@@ -37,7 +37,7 @@ public:
     int tilesize;
     int prepadding;
     int imgcount;
-
+    int log_level;
 private:
     ncnn::Net net;
     ncnn::Pipeline* realesrgan_preproc;

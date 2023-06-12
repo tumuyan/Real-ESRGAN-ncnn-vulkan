@@ -119,6 +119,7 @@ static void print_usage()
     fprintf(stderr, "  -x                   enable tta mode\n");
     fprintf(stderr, "  -f format            output image format (jpg/png/webp, default=ext/png)\n");
     fprintf(stderr, "  -v                   verbose output\n");
+    fprintf(stderr, "  -l log-level         output log level (can be 1,2,3,4, default=2)\n");
 }
 
 class Task
@@ -338,12 +339,6 @@ void* proc(void* args)
             break;
 
         realesrgan->process(v.inimage, v.outimage, v.inpath);
-  //      fprintf(stderr, "%d\t", toproc.size());
-		//if (toproc.size() > 1)
-		//	realesrgan->process(v.inimage, v.outimage, v.inpath);
-		//else
-		//	realesrgan->process(v.inimage, v.outimage, no_path);
-
 
         tosave.put(v);
     }
@@ -422,14 +417,11 @@ void* save(void* args)
         }
         if (success)
         {
-            if (verbose)
-            {
 #if _WIN32
-                fwprintf(stderr, L"%ls -> %ls done\n", v.inpath.c_str(), v.outpath.c_str());
+                fwprintf(stderr, L"\r[Done]%ls -> %ls\n", v.inpath.c_str(), v.outpath.c_str());
 #else
-                fprintf(stderr, "%s -> %s done\n", v.inpath.c_str(), v.outpath.c_str());
+                fprintf(stderr, "\r[Done]%s -> %s\n", v.inpath.c_str(), v.outpath.c_str());
 #endif
-            }
         }
         else
         {
@@ -452,10 +444,10 @@ void print_time_usage(high_resolution_clock::time_point begin) {
 	if (time_s > 120) {
 		int time_m = (int)time_s / 60;
 		time_s = time_s - time_m * 60;
-		fprintf(stderr, "use time: %d minute %.2f second.\n", time_m, time_s);
+		fprintf(stderr, "\nuse time: %d minute %.2f second.\n", time_m, time_s);
 	}
 	else
-		fprintf(stderr, "use time: %.2f second.\n", time_span);
+		fprintf(stderr, "\nuse time: %.2f second.\n", time_span);
 }
 
 
@@ -480,11 +472,12 @@ int main(int argc, char** argv)
     int verbose = 0;
     int tta_mode = 0;
     path_t format = PATHSTR("png");
+    int log_level = 2;
 
 #if _WIN32
     setlocale(LC_ALL, "");
     wchar_t opt;
-    while ((opt = getopt(argc, argv, L"i:o:s:t:m:n:g:j:f:vxh")) != (wchar_t)-1)
+    while ((opt = getopt(argc, argv, L"i:o:s:t:m:n:g:j:f:l:vxh")) != (wchar_t)-1)
     {
         switch (opt)
         {
@@ -522,6 +515,9 @@ int main(int argc, char** argv)
         case L'x':
             tta_mode = 1;
             break;
+        case L'l':
+            log_level = _wtoi(optarg);
+            break;
         case L'h':
         default:
             print_usage();
@@ -530,7 +526,7 @@ int main(int argc, char** argv)
     }
 #else // _WIN32
     int opt;
-    while ((opt = getopt(argc, argv, "i:o:s:t:m:n:g:j:f:vxh")) != -1)
+    while ((opt = getopt(argc, argv, "i:o:s:t:m:n:g:j:f:l:vxh")) != -1)
     {
         switch (opt)
         {
@@ -567,6 +563,9 @@ int main(int argc, char** argv)
             break;
         case 'x':
             tta_mode = 1;
+            break;
+        case 'l':
+            log_level = atoi(optarg);
             break;
         case 'h':
         default:
@@ -629,9 +628,21 @@ int main(int argc, char** argv)
             //outputpath = PATHSTR(outputpath_str);
 
             if (_wmkdir(outputpath.c_str()) == 0)
-                fprintf(stderr, "make outpput dir: %ls", outputpath);
+            {
+#if _WIN32
+                fwprintf(stderr, L"make outpput dir: %ls\n", outputpath.c_str());
+#else
+                fprintf(stderr, "make outpput dir: %s\n", outputpath.c_str());
+#endif
+            }
             else
-                fprintf(stderr, "make outpput dir fail: %ls", outputpath);
+            {
+#if _WIN32
+                fwprintf(stderr, L"[Fail]make outpput dir: %ls\n", outputpath.c_str());
+#else
+                fprintf(stderr, "[Fail]make outpput dir: %s\n", outputpath.c_str());
+#endif
+            }
         }
     }
 
@@ -817,8 +828,17 @@ int main(int argc, char** argv)
 #endif
 
     ncnn::create_gpu_instance();
-    fprintf(stderr, "load model: %ls\n", modelpath);
 
+
+    if (input_files.size() > 1) {
+        fprintf(stderr, "input file: %d\n", input_files.size());
+    }
+   
+#if _WIN32
+    fwprintf(stderr, L"load model: %ls\n", modelpath);
+#else
+    fprintf(stderr, "load model: %s\n", modelpath);
+#endif
 
     if (gpuid.empty())
     {
@@ -895,6 +915,8 @@ int main(int argc, char** argv)
             realesrgan[i]->tilesize = tilesize[i];
             realesrgan[i]->prepadding = prepadding;
             realesrgan[i]->imgcount = input_files.size();
+            realesrgan[i]->log_level = log_level;
+
         }
 
         // main routine
