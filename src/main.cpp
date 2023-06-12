@@ -25,6 +25,7 @@ namespace fs = std::filesystem;
 #include "stb_image_write.h"
 #endif // _WIN32
 #include "webp_image.h"
+#include <direct.h>
 #include <chrono>
 
 using namespace std::chrono;
@@ -575,10 +576,63 @@ int main(int argc, char** argv)
     }
 #endif // _WIN32
 
-    if (inputpath.empty() || outputpath.empty())
-    {
-        print_usage();
-        return -1;
+
+	//if (inputpath.empty())
+	//{
+	//	if (!opt_cache.empty()) {
+	//		if (fs::exists(opt_cache)) {
+	//			inputpath = opt_cache;
+	//		}
+	//	}
+	//}
+
+	if (inputpath.empty())
+	{
+		print_usage();
+		return -1;
+	}
+
+    if (outputpath.empty()) {
+
+        if (!path_is_directory(inputpath))
+        {
+            // guess format from outputpath no matter what format argument specified
+            path_t ext = get_file_extension(inputpath);
+
+            if (ext == PATHSTR("png") || ext == PATHSTR("PNG"))
+            {
+                format = PATHSTR("png");
+            }
+            else if (ext == PATHSTR("webp") || ext == PATHSTR("WEBP"))
+            {
+                format = PATHSTR("webp");
+            }
+            else if (ext == PATHSTR("jpg") || ext == PATHSTR("JPG") || ext == PATHSTR("jpeg") || ext == PATHSTR("JPEG"))
+            {
+                format = PATHSTR("jpg");
+            }
+            else
+            {
+                format = PATHSTR("png");
+                fprintf(stderr, "change outputpath extension type: %ls -> %ls\n", ext, format);
+            }
+
+            outputpath = get_file_name_without_extension(inputpath) + L"_x" + std::to_wstring(scale) + L"." + format;
+
+            //std::wstring outputpath_str = std::to_string(get_file_name_without_extension(inputpath)) + L"_x" + std::to_string(scale) + L"." + format;
+            //outputpath = PATHSTR(outputpath_str);
+        }
+        else {
+            outputpath = get_file_name_without_extension(inputpath) + L"_x"  + std::to_wstring(scale) ;
+
+            //std::wstring outputpath_str = inputpath_str + L"_x" + std::to_string(scale);
+            //outputpath = PATHSTR(outputpath_str);
+
+            if (_wmkdir(outputpath.c_str()) == 0)
+                fprintf(stderr, "make outpput dir: %ls", outputpath);
+            else
+                fprintf(stderr, "make outpput dir fail: %ls", outputpath);
+        }
     }
 
     if (tilesize.size() != (gpuid.empty() ? 1 : gpuid.size()) && !tilesize.empty())
