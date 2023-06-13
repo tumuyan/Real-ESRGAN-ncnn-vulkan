@@ -117,7 +117,8 @@ static void print_usage()
     fprintf(stderr, "  -g gpu-id            gpu device to use (default=auto) can be 0,1,2 for multi-gpu\n");
     fprintf(stderr, "  -j load:proc:save    thread count for load/proc/save (default=1:2:2) can be 1:2,2,2:2 for multi-gpu\n");
     fprintf(stderr, "  -x                   enable tta mode\n");
-    fprintf(stderr, "  -f format            output image format (jpg/png/webp, default=ext/png)\n");
+    fprintf(stderr, "  -f format            output image format (jpg/png/webp, default=ext)\n");
+    fprintf(stderr, "  -F default-format    output image default format (jpg/png/webp, default=png)Only works when input file ext couldn't apply as output.\n");
     fprintf(stderr, "  -v                   verbose output\n");
     fprintf(stderr, "  -l log-level         output log level (can be 1,2,3,4, default=2)\n");
 }
@@ -436,6 +437,20 @@ void* save(void* args)
     return 0;
 }
 
+path_t gen_output_ext(path_t input_path,path_t default_ext) {
+    path_t ext = get_file_extension(input_path);
+
+    std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+     
+    if (ext == PATHSTR("png") || ext == PATHSTR("webp")|| ext == PATHSTR("jpg")|| ext == PATHSTR("jpeg")  )
+    {
+        return ext;
+    }
+    else
+    {
+        return default_ext;
+    }
+}
 
 void print_time_usage(high_resolution_clock::time_point begin) {
 	high_resolution_clock::time_point end = high_resolution_clock::now();
@@ -471,13 +486,15 @@ int main(int argc, char** argv)
     int jobs_save = 2;
     int verbose = 0;
     int tta_mode = 0;
-    path_t format = PATHSTR("png");
+    path_t format = no_path;
+    path_t default_format = PATHSTR("png");
     int log_level = 2;
+
 
 #if _WIN32
     setlocale(LC_ALL, "");
     wchar_t opt;
-    while ((opt = getopt(argc, argv, L"i:o:s:t:m:n:g:j:f:l:vxh")) != (wchar_t)-1)
+    while ((opt = getopt(argc, argv, L"i:o:s:t:m:n:g:j:f:F:l:vxh")) != (wchar_t)-1)
     {
         switch (opt)
         {
@@ -509,6 +526,9 @@ int main(int argc, char** argv)
         case L'f':
             format = optarg;
             break;
+        case L'F':
+            default_format = optarg;
+            break;
         case L'v':
             verbose = 1;
             break;
@@ -526,7 +546,7 @@ int main(int argc, char** argv)
     }
 #else // _WIN32
     int opt;
-    while ((opt = getopt(argc, argv, "i:o:s:t:m:n:g:j:f:l:vxh")) != -1)
+    while ((opt = getopt(argc, argv, "i:o:s:t:m:n:g:j:f:F:l:vxh")) != -1)
     {
         switch (opt)
         {
@@ -557,6 +577,9 @@ int main(int argc, char** argv)
             break;
         case 'f':
             format = optarg;
+            break;
+        case 'F':
+            default_format = optarg;
             break;
         case 'v':
             verbose = 1;
@@ -591,60 +614,42 @@ int main(int argc, char** argv)
 		return -1;
 	}
 
-    if (outputpath.empty()) {
+	if (outputpath.empty()) {
 
-        if (!path_is_directory(inputpath))
-        {
-            // guess format from outputpath no matter what format argument specified
-            path_t ext = get_file_extension(inputpath);
+		if (!path_is_directory(inputpath))
+		{
+            if(format==no_path)
+			    format = gen_output_ext(inputpath, default_format);
+			outputpath = get_file_name_without_extension(inputpath) + L"_x" + std::to_wstring(scale) + L"." + format;
 
-            if (ext == PATHSTR("png") || ext == PATHSTR("PNG"))
-            {
-                format = PATHSTR("png");
-            }
-            else if (ext == PATHSTR("webp") || ext == PATHSTR("WEBP"))
-            {
-                format = PATHSTR("webp");
-            }
-            else if (ext == PATHSTR("jpg") || ext == PATHSTR("JPG") || ext == PATHSTR("jpeg") || ext == PATHSTR("JPEG"))
-            {
-                format = PATHSTR("jpg");
-            }
-            else
-            {
-                format = PATHSTR("png");
-                fprintf(stderr, "change outputpath extension type: %ls -> %ls\n", ext, format);
-            }
+			//std::wstring outputpath_str = std::to_string(get_file_name_without_extension(inputpath)) + L"_x" + std::to_string(scale) + L"." + format;
+			//outputpath = PATHSTR(outputpath_str);
+		}
+		else {
+			outputpath = get_file_name_without_extension(inputpath) + L"_x" + std::to_wstring(scale);
 
-            outputpath = get_file_name_without_extension(inputpath) + L"_x" + std::to_wstring(scale) + L"." + format;
-
-            //std::wstring outputpath_str = std::to_string(get_file_name_without_extension(inputpath)) + L"_x" + std::to_string(scale) + L"." + format;
-            //outputpath = PATHSTR(outputpath_str);
-        }
-        else {
-            outputpath = get_file_name_without_extension(inputpath) + L"_x"  + std::to_wstring(scale) ;
-
-            //std::wstring outputpath_str = inputpath_str + L"_x" + std::to_string(scale);
-            //outputpath = PATHSTR(outputpath_str);
-
-            if (_wmkdir(outputpath.c_str()) == 0)
-            {
+			if (fs::exists(outputpath) != 1) {
+				// fs::create_directories(parent_path);
+				if (_wmkdir(outputpath.c_str()) == 0)
+				{
 #if _WIN32
-                fwprintf(stderr, L"make outpput dir: %ls\n", outputpath.c_str());
+					fwprintf(stderr, L"Creat outpput dir: %ls\n", outputpath.c_str());
 #else
-                fprintf(stderr, "make outpput dir: %s\n", outputpath.c_str());
+					fprintf(stderr, "Creat outpput dir: %s\n", outputpath.c_str());
 #endif
-            }
-            else
-            {
+				}
+				else
+				{
 #if _WIN32
-                fwprintf(stderr, L"[Fail]make outpput dir: %ls\n", outputpath.c_str());
+					fwprintf(stderr, L"[Fail]Creat outpput dir: %ls\n", outputpath.c_str());
 #else
-                fprintf(stderr, "[Fail]make outpput dir: %s\n", outputpath.c_str());
+					fprintf(stderr, "[Fail]Creat outpput dir: %s\n", outputpath.c_str());
 #endif
-            }
-        }
-    }
+				}
+			}
+
+		}
+	}
 
     if (tilesize.size() != (gpuid.empty() ? 1 : gpuid.size()) && !tilesize.empty())
     {
@@ -685,32 +690,18 @@ int main(int argc, char** argv)
     if (!path_is_directory(outputpath))
     {
         // guess format from outputpath no matter what format argument specified
-        path_t ext = get_file_extension(outputpath);
-
-        if (ext == PATHSTR("png") || ext == PATHSTR("PNG"))
-        {
-            format = PATHSTR("png");
-        }
-        else if (ext == PATHSTR("webp") || ext == PATHSTR("WEBP"))
-        {
-            format = PATHSTR("webp");
-        }
-        else if (ext == PATHSTR("jpg") || ext == PATHSTR("JPG") || ext == PATHSTR("jpeg") || ext == PATHSTR("JPEG"))
-        {
-            format = PATHSTR("jpg");
-        }
-        else
-        {
+        format = gen_output_ext(outputpath, no_path);
+        if (format == no_path) {
             fprintf(stderr, "invalid outputpath extension type\n");
             return -1;
         }
     }
 
-    if (format != PATHSTR("png") && format != PATHSTR("webp") && format != PATHSTR("jpg"))
-    {
-        fprintf(stderr, "invalid format argument\n");
-        return -1;
-    }
+    //if (format != PATHSTR("png") && format != PATHSTR("webp") && format != PATHSTR("jpg"))
+    //{
+    //    fprintf(stderr, "invalid format argument\n");
+    //    return -1;
+    //}
 
     // collect input and output filepath
     std::vector<path_t> input_files;
@@ -733,12 +724,13 @@ int main(int argc, char** argv)
             {
                 path_t filename = filenames[i];
                 path_t filename_noext = get_file_name_without_extension(filename);
-                path_t output_filename = filename_noext + PATHSTR('.') + format;
+                path_t ext = (format==no_path)?gen_output_ext(filename,default_format):format;
+                path_t output_filename = filename_noext + PATHSTR('.') + ext;
 
                 // filename list is sorted, check if output image path conflicts
                 if (filename_noext == last_filename_noext)
                 {
-                    path_t output_filename2 = filename + PATHSTR('.') + format;
+                    path_t output_filename2 = filename + PATHSTR('.') + ext;
 #if _WIN32
                     fwprintf(stderr, L"both %ls and %ls output %ls ! %ls will output %ls\n", filename.c_str(), last_filename.c_str(), output_filename.c_str(), filename.c_str(), output_filename2.c_str());
 #else
@@ -835,9 +827,9 @@ int main(int argc, char** argv)
     }
    
 #if _WIN32
-    fwprintf(stderr, L"load model: %ls\n", modelpath);
+    fwprintf(stderr, L"[Model]%ls\n", modelpath);
 #else
-    fprintf(stderr, "load model: %s\n", modelpath);
+    fprintf(stderr, "[Model]%s\n", modelpath);
 #endif
 
     if (gpuid.empty())
