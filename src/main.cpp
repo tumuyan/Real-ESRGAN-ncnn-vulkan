@@ -11,6 +11,7 @@ namespace fs = std::filesystem;
 #if _WIN32
 // image decoder and encoder with wic
 #include "wic_image.h"
+#include <direct.h>
 #else // _WIN32
 // image decoder and encoder with stb
 #define STB_IMAGE_IMPLEMENTATION
@@ -23,9 +24,9 @@ namespace fs = std::filesystem;
 #include "stb_image.h"
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
+#include <dirent.h>
 #endif // _WIN32
 #include "webp_image.h"
-#include <direct.h>
 #include <chrono>
 
 using namespace std::chrono;
@@ -618,34 +619,35 @@ int main(int argc, char** argv)
 
 		if (!path_is_directory(inputpath))
 		{
-            if(format==no_path)
-			    format = gen_output_ext(inputpath, default_format);
+			if (format == no_path)
+				format = gen_output_ext(inputpath, default_format);
+#if _WIN32
 			outputpath = get_file_name_without_extension(inputpath) + L"_x" + std::to_wstring(scale) + L"." + format;
-
-			//std::wstring outputpath_str = std::to_string(get_file_name_without_extension(inputpath)) + L"_x" + std::to_string(scale) + L"." + format;
-			//outputpath = PATHSTR(outputpath_str);
+#else
+			outputpath = get_file_name_without_extension(inputpath) + "_x" + std::to_string(scale) + "." + format;
+#endif
 		}
 		else {
-			outputpath = inputpath + L"_x" + std::to_wstring(scale);
 
-			if (fs::exists(outputpath) != 1) {
-				// fs::create_directories(parent_path);
-				if (_wmkdir(outputpath.c_str()) == 0)
-				{
 #if _WIN32
-					fwprintf(stderr, L"Creat outpput dir: %ls\n", outputpath.c_str());
+			outputpath = inputpath + L"_x" + std::to_wstring(scale);
 #else
-					fprintf(stderr, "Creat outpput dir: %s\n", outputpath.c_str());
+			outputpath = inputpath + "_x" + std::to_string(scale);
 #endif
-				}
-				else
-				{
+			if (fs::exists(outputpath) != 1) {
+
 #if _WIN32
+				if (_wmkdir(outputpath.c_str()) == 0)
+					fwprintf(stderr, L"Creat outpput dir: %ls\n", outputpath.c_str());
+				else
 					fwprintf(stderr, L"[Fail]Creat outpput dir: %ls\n", outputpath.c_str());
+
 #else
+				if (mkdir(outputpath.c_str()) == 0)
+					fprintf(stderr, "Creat outpput dir: %s\n", outputpath.c_str());
+				else
 					fprintf(stderr, "[Fail]Creat outpput dir: %s\n", outputpath.c_str());
 #endif
-				}
 			}
 
 		}
