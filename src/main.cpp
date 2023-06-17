@@ -626,7 +626,7 @@ int main(int argc, char** argv)
 			//outputpath = PATHSTR(outputpath_str);
 		}
 		else {
-			outputpath = get_file_name_without_extension(inputpath) + L"_x" + std::to_wstring(scale);
+			outputpath = inputpath + L"_x" + std::to_wstring(scale);
 
 			if (fs::exists(outputpath) != 1) {
 				// fs::create_directories(parent_path);

@@ -204,22 +204,30 @@ int RealESRGAN::load(const std::string& parampath, const std::string& modelpath)
     return 0;
 }
 
-void print_progress(high_resolution_clock::time_point begin, float progress, path_t& inpath, int imgcount, bool erase) {
+void print_progress(high_resolution_clock::time_point begin, float progress, path_t& inpath, int imgcount, bool not_new_line) {
 	high_resolution_clock::time_point end = high_resolution_clock::now();
 	double time_span = duration_cast<duration<double>>(end - begin).count();
 	if (imgcount > 1) {
-        if (!erase)
-        {
+		if (not_new_line) {
+            if (rand() % 3 == 0) {
+                fprintf(stderr, "\r                     \r");
+            }
+			else
+				fprintf(stderr, ".");
+		}
+		else
+		{
 #if _WIN32
-            fwprintf(stderr, L"%5.2f%% [%5.2fs /%5.2f ETA] %ls\n", progress * 100, time_span, time_span / progress - time_span, inpath.c_str());
+			fwprintf(stderr, L"%5.2f%% [%5.2fs /%5.2f ETA] %ls\n", progress * 100, time_span, time_span / progress - time_span, inpath.c_str());
 #else
-            fprintf(stderr, "%5.2f%% [%5.2fs /%5.2f ETA] %s\n", progress * 100, time_span, time_span / progress - time_span, inpath.c_str());
+			fprintf(stderr, "%5.2f%% [%5.2fs /%5.2f ETA] %s\n", progress * 100, time_span, time_span / progress - time_span, inpath.c_str());
 #endif
-            
-        }
+
 	}
+
+}
 	else {
-		if (erase)
+		if (not_new_line)
 			fprintf(stderr, "\r%5.2f%% [%5.2fs /%5.2f ETA]", progress * 100, time_span, time_span / progress - time_span);
 		else
 			fprintf(stderr, "%5.2f%% [%5.2fs /%5.2f ETA]\n", progress * 100, time_span, time_span / progress - time_span);

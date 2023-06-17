@@ -37,3 +37,4 @@ release
 *.out
 *.app
 .vs
+src/CMakeSettings.json
