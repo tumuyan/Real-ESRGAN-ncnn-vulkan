@@ -643,7 +643,7 @@ int main(int argc, char** argv)
 					fwprintf(stderr, L"[Fail]Creat outpput dir: %ls\n", outputpath.c_str());
 
 #else
-				if (mkdir(outputpath.c_str()) == 0)
+				if (mkdir(outputpath.c_str(),0755) == 0)
 					fprintf(stderr, "Creat outpput dir: %s\n", outputpath.c_str());
 				else
 					fprintf(stderr, "[Fail]Creat outpput dir: %s\n", outputpath.c_str());
