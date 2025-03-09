@@ -634,7 +634,7 @@ int main(int argc, char** argv)
 #else
 			outputpath = inputpath + "_x" + std::to_string(scale);
 #endif
-			if (fs::exists(outputpath) != 1) {
+			if ( path_is_directory(inputpath)  && fs::exists(outputpath) != 1) {
 
 #if _WIN32
 				if (_wmkdir(outputpath.c_str()) == 0)
@@ -687,6 +687,11 @@ int main(int argc, char** argv)
             fprintf(stderr, "invalid jobs_proc thread count argument\n");
             return -1;
         }
+    }
+
+    if (path_is_directory(inputpath) && outputpath != no_path && !path_is_directory(outputpath)) {
+        // 之前加的，是否有用存疑
+        fs::create_directory(outputpath);
     }
 
     if (!path_is_directory(outputpath))
@@ -750,14 +755,14 @@ int main(int argc, char** argv)
                 output_files[i] = outputpath + PATHSTR('/') + output_filename;
             }
         }
-        else if (!path_is_directory(inputpath) && !path_is_directory(outputpath))
+        else if ((!path_is_directory(inputpath)) && (!path_is_directory(outputpath)))
         {
             input_files.push_back(inputpath);
             output_files.push_back(outputpath);
         }
         else
         {
-            fprintf(stderr, "inputpath and outputpath must be either file or directory at the same time\n");
+            fprintf(stderr, "inputpath and outputpath must be either file or directory at the same time.%s %s\n",  ( path_is_directory(inputpath)?"Dir":"File") , (path_is_directory(outputpath)? "Dir" : "File") );
             return -1;
         }
     }

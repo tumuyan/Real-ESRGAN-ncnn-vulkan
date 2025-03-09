@@ -210,7 +210,7 @@ void print_progress(high_resolution_clock::time_point begin, float progress, pat
 	if (imgcount > 1) {
 		if (not_new_line) {
             if (rand() % 3 == 0) {
-                fprintf(stderr, "\r                     \r");
+                fprintf(stderr, "\r                            \rBusy");
             }
 			else
 				fprintf(stderr, ".");
