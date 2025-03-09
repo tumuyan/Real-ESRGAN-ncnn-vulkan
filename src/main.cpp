@@ -479,7 +479,11 @@ int main(int argc, char** argv)
     path_t outputpath;
     int scale = 2;
     std::vector<int> tilesize;
-    path_t model = PATHSTR("models");
+    path_t model = PATHSTR("models"); 
+    
+    if (!fs::exists("models"))
+        model = no_path;
+
     path_t modelname = PATHSTR("RealESRGAN-SourceBook-latest-fp16");
     std::vector<int> gpuid;
     int jobs_load = 1;
@@ -769,16 +773,16 @@ int main(int argc, char** argv)
 
     int prepadding = 0;
 
-    if (model.find(PATHSTR("models")) != path_t::npos
-        || model.find(PATHSTR("models2")) != path_t::npos)
-    {
+    //if (model.find(PATHSTR("models")) != path_t::npos
+    //    || model.find(PATHSTR("models2")) != path_t::npos)
+    //{
         prepadding = 10;
-    }
-    else
-    {
-        fprintf(stderr, "unknown model dir type\n");
-        return -1;
-    }
+    //}
+    //else
+    //{
+    //    fprintf(stderr, "unknown model dir type\n");
+    //    return -1;
+    //}
 
     // if (modelname.find(PATHSTR("realesrgan-x4plus")) != path_t::npos
     //     || modelname.find(PATHSTR("realesrnet-x4plus")) != path_t::npos
@@ -790,11 +794,15 @@ int main(int argc, char** argv)
     //     return -1;
     // }
 
+
 #if _WIN32
     wchar_t parampath[256];
     wchar_t modelpath[256];
 
-    if (modelname == PATHSTR("realesr-animevideov3"))
+    if (model == no_path) {
+        swprintf(parampath, 256, L"%s.param", modelname.c_str());
+        swprintf(modelpath, 256, L"%s.bin", modelname.c_str());
+    }else if (modelname == PATHSTR("realesr-animevideov3"))
     {
         swprintf(parampath, 256, L"%s/%s-x%s.param", model.c_str(), modelname.c_str(), std::to_string(scale));
         swprintf(modelpath, 256, L"%s/%s-x%s.bin", model.c_str(), modelname.c_str(), std::to_string(scale));
@@ -808,7 +816,11 @@ int main(int argc, char** argv)
     char parampath[256];
     char modelpath[256];
 
-    if (modelname == PATHSTR("realesr-animevideov3"))
+
+    if (model == no_path) {
+        sprintf(parampath, 256, L"%s.param", modelname.c_str());
+        sprintf(modelpath, 256, L"%s.bin", modelname.c_str());
+    }else if (modelname == PATHSTR("realesr-animevideov3"))
     {
         sprintf(parampath, "%s/%s-x%s.param", model.c_str(), modelname.c_str(), std::to_string(scale).c_str());
         sprintf(modelpath, "%s/%s-x%s.bin", model.c_str(), modelname.c_str(), std::to_string(scale).c_str());
@@ -888,7 +900,7 @@ int main(int argc, char** argv)
         uint32_t heap_budget = ncnn::get_gpu_device(gpuid[i])->get_heap_budget();
 
         // more fine-grained tilesize policy here
-        if (model.find(PATHSTR("models")) != path_t::npos)
+        //if (model.find(PATHSTR("models")) != path_t::npos)
         {
             if (heap_budget > 1900)
                 tilesize[i] = 200;

@@ -86,6 +86,7 @@ int RealESRGAN::load(const std::wstring& parampath, const std::wstring& modelpat
 int RealESRGAN::load(const std::string& parampath, const std::string& modelpath)
 #endif
 {
+
 #if _WIN32
     {
         FILE* fp = _wfopen(parampath.c_str(), L"rb");
@@ -113,6 +114,55 @@ int RealESRGAN::load(const std::string& parampath, const std::string& modelpath)
     net.load_param(parampath.c_str());
     net.load_model(modelpath.c_str());
 #endif
+
+
+
+
+    // 获取输入和输出名称
+    const auto& input_names = net.input_names();
+    const auto& output_names = net.output_names();
+
+    if (input_names.empty()) {
+		fprintf(stderr, "model not have input_names\n");
+		return -1;
+    }
+    if (output_names.empty()) {
+        fprintf(stderr, "model not have output_names\n");
+        return -1;
+    }
+
+    // 检查输入名称是否存在
+    if (std::find(input_names.begin(), input_names.end(), net_input_name) == input_names.end()) {
+        fprintf(stderr, "net_input_name data %s -> %s\n", net_input_name, input_names[0]);
+        net_input_name = input_names[0];
+    }
+
+    // 检查输出名称是否存在
+    if (std::find(output_names.begin(), output_names.end(), net_output_name) == output_names.end()) {
+        fprintf(stderr, "net_output_name output %s -> %s\n", net_output_name, output_names[0]);
+        net_output_name = output_names[0];
+    }
+
+    //{
+    //    int num_inputs = net.input_size();
+    //    int num_outputs = net.output_size();
+
+    //    if (num_inputs > 0 && num_outputs > 0) {
+    //        const ncnn::Mat input_shape = net.input_shape(0);
+    //        const ncnn::Mat output_shape = net.output_shape(0);
+
+    //        float scale_factor = calculate_scale_factor(input_shape, output_shape);
+
+    //        fprintf(stderr, "输入形状：%d %d %d\n", input_shape.w , input_shape.h, input_shape.c);
+    //        fprintf(stderr, "输出形状：%d %d %d\n", output_shape.w, output_shape.h, output_shape.c);
+    //        fprintf(stderr, "缩放倍率：%d\n", scale_factor);
+
+    //    }
+    //    else {
+
+    //        fprintf(stderr, "未找到输入或输出\n" );
+    //    }
+    //}
 
     // initialize preprocess and postprocess pipeline
     {
@@ -397,9 +447,9 @@ int RealESRGAN::process(const ncnn::Mat& inimage, ncnn::Mat& outimage, path_t& i
                     ex.set_workspace_vkallocator(blob_vkallocator);
                     ex.set_staging_vkallocator(staging_vkallocator);
 
-                    ex.input("data", in_tile_gpu[ti]);
+                    ex.input(net_input_name.c_str(), in_tile_gpu[ti]);
 
-                    ex.extract("output", out_tile_gpu[ti], cmd);
+                    ex.extract(net_output_name.c_str(), out_tile_gpu[ti], cmd);
 
                     {
                         cmd.submit_and_wait();
@@ -521,9 +571,9 @@ int RealESRGAN::process(const ncnn::Mat& inimage, ncnn::Mat& outimage, path_t& i
                     ex.set_workspace_vkallocator(blob_vkallocator);
                     ex.set_staging_vkallocator(staging_vkallocator);
 
-                    ex.input("data", in_tile_gpu);
+                    ex.input(net_input_name.c_str(), in_tile_gpu);
 
-                    ex.extract("output", out_tile_gpu, cmd);
+                    ex.extract(net_output_name.c_str(), out_tile_gpu, cmd);
                 }
 
                 ncnn::VkMat out_alpha_tile_gpu;

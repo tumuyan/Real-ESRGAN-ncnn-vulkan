@@ -38,6 +38,9 @@ public:
     int prepadding;
     int imgcount;
     int log_level;
+    // 保存找到的输入和输出名称
+    std::string net_input_name = "data";
+    std::string net_output_name = "output";
 private:
     ncnn::Net net;
     ncnn::Pipeline* realesrgan_preproc;
