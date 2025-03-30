@@ -19,7 +19,6 @@ jobs:
       run: |
         Invoke-WebRequest -Uri https://sdk.lunarg.com/sdk/download/1.4.309.0/windows/VulkanSDK-1.4.309.0-Installer.exe?Human=true -OutFile VulkanSDK-Installer.exe
         7z x -aoa ./VulkanSDK-Installer.exe -oVulkanSDK
-        Remove-Item .\VulkanSDK\Demos, .\VulkanSDK\Samples, .\VulkanSDK\Third-Party, .\VulkanSDK\Tools, .\VulkanSDK\Tools32, .\VulkanSDK\Bin32, .\VulkanSDK\Lib32 -Recurse
     - name: build
       run: |
         $env:VULKAN_SDK="$(pwd)/VulkanSDK"
@@ -42,7 +41,7 @@ jobs:
     - name: vulkansdk
       if: steps.cache-vulkansdk.outputs.cache-hit != 'true'
       run: |
-        wget https://sdk.lunarg.com/sdk/download/1.4.309.0/linux/vulkansdk-linux-x86_64-1.4.309.0.tar.gz?Human=true -O vulkansdk-linux-x86_64.tar.gz
+        wget https://sdk.lunarg.com/sdk/download/1.4.309.0/linux/vulkansdk-linux-x86_64-1.4.309.0.tar.xz?Human=true -O vulkansdk-linux-x86_64.tar.gz
         tar -xf vulkansdk-linux-x86_64.tar.gz
         rm -rf 1.4.309.0/source 1.4.309.0/samples
         find 1.4.309.0 -type f | grep -v -E 'vulkan|glslang' | xargs rm
