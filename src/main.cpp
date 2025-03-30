@@ -481,8 +481,23 @@ int main(int argc, char** argv)
     std::vector<int> tilesize;
     path_t model = PATHSTR("models"); 
     
-    if (!fs::exists("models"))
-        model = no_path;
+    if (!fs::exists("models") || !fs::is_directory("models")) {
+        // 获取程序的完整路径
+        fs::path programPath = argv[0];
+
+        // 获取程序所在的目录
+        fs::path programDir = programPath.parent_path();
+
+        fs::path modelsPath = programDir / "models";
+        if (fs::exists(modelsPath) && fs::is_directory(modelsPath)) {
+			model = modelsPath;
+        }else {
+            model = no_path;
+        }
+    }
+       
+
+    //fprintf(stderr, "model folder, %s, %d, %d\n", model, fs::exists("models"), fs::exists("./models"));
 
     path_t modelname = PATHSTR("RealESRGAN-SourceBook-latest-fp16");
     std::vector<int> gpuid;
